@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "MIT"
+
+[[mods]]
+modId = "clipboardsync"
+version = "1.0.0"
+displayName = "Clipboard Sync"
+description = '''把 Useful Clipboard 写字板的文字，经游戏连接双向同步到本地编辑器。'''
+authors = "whale"
+
+[[dependencies.clipboardsync]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.clipboardsync]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,1.20.2)"
+ordering = "NONE"
+side = "BOTH"
+
+# 运行期识别 usclb:clipboard 用字符串判断，不硬依赖；无此模组时同步功能静默失效。
+[[dependencies.clipboardsync]]
+modId = "usclb"
+mandatory = false
+versionRange = "[0.0.26,)"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,22 @@
+# Gradle / build output
+.gradle/
+build/
+out/
+
+# IDE
+*.iml
+.idea/
+.vscode/
+eclipse/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# jars produced by build
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# logs
+*.log
+logs/

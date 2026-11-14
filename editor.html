@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写字板同步编辑器</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Microsoft YaHei", system-ui, sans-serif;
+    background: #1b1e23; color: #e8eaf0; min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; background: #23272f; border-bottom: 1px solid #333a45;
+  }
+  header h1 { font-size: 17px; margin: 0; }
+  #status { font-size: 13px; padding: 4px 12px; border-radius: 20px; background: #3a3f4a; }
+  #status.ok { background: #1f5d3a; }
+  #status.err { background: #6b2b2b; }
+  .tabs { display: flex; gap: 6px; padding: 12px 20px 0; }
+  .tabs button {
+    flex: 1; padding: 9px 0; cursor: pointer; border: 1px solid #333a45;
+    background: #23272f; color: #c4cad4; border-radius: 8px 8px 0 0; font-size: 14px;
+  }
+  .tabs button.active { background: #2f3642; color: #fff; border-bottom-color: #2f3642; }
+  #lines { flex: 1; padding: 12px 20px 20px; overflow-y: auto; }
+  .line { display: flex; gap: 8px; margin-bottom: 8px; align-items: stretch; }
+  .line input, .line textarea {
+    background: #23272f; border: 1px solid #333a45; color: #fff;
+    border-radius: 6px; outline: none; padding: 8px 10px; font-size: 14px;
+  }
+  .line input:focus, .line textarea:focus { border-color: #4f7df0; }
+  .line .h { width: 22%; font-size: 13px; }
+  .line .t { flex: 1; resize: none; font-family: inherit; line-height: 1.5; }
+  footer {
+    padding: 10px 20px; font-size: 12px; color: #8a92a0;
+    border-top: 1px solid #333a45; background: #23272f;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>📋 写字板同步</h1>
+    <span id="status">连接中…</span>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <div id="lines"></div>
+  <footer>游戏里把写字板拿在主手，这里改动约 0.5 秒内同步进游戏；游戏里改也会回传。每页 12 行。</footer>
+
+<script>
+const PORT = 8765;
+const BASE = 'http://127.0.0.1:' + PORT;
+const PAGE_COUNT = 5;
+const LINE_COUNT = 12;
+
+const pages = [];            // pages[p][l] = {header, text}
+const headerEls = [];        // 12 个标题输入框
+const textEls = [];          // 12 个正文输入框
+let currentPage = 0;
+let stateLoaded = false;
+let lastSentJson = null;
+let lastRemoteJson = null;
+let timer = null;
+
+const statusEl = document.getElementById('status');
+const tabsEl = document.getElementById('tabs');
+const linesEl = document.getElementById('lines');
+
+function setStatus(txt, cls) {
+  statusEl.textContent = txt;
+  statusEl.className = cls || '';
+}
+
+function init() {
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    pages.push([]);
+    for (let l = 0; l < LINE_COUNT; l++) pages[p].push({ header: '', text: '' });
+  }
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    const b = document.createElement('button');
+    b.textContent = '第' + (p + 1) + '页';
+    b.onclick = () => switchPage(p);
+    tabsEl.appendChild(b);
+  }
+  for (let l = 0; l < LINE_COUNT; l++) {
+    const row = document.createElement('div');
+    row.className = 'line';
+    const h = document.createElement('input');
+    h.className = 'h'; h.placeholder = '标题';
+    const t = document.createElement('textarea');
+    t.className = 't'; t.placeholder = '第' + (l + 1) + '行';
+    row.appendChild(h); row.appendChild(t);
+    linesEl.appendChild(row);
+    headerEls.push(h); textEls.push(t);
+    h.addEventListener('input', scheduleSend);
+    t.addEventListener('input', scheduleSend);
+  }
+  renderTabs(); renderLines();
+}
+
+function renderTabs() {
+  for (let i = 0; i < tabsEl.children.length; i++)
+    tabsEl.children[i].className = (i === currentPage) ? 'active' : '';
+}
+
+function renderLines() {
+  for (let l = 0; l < LINE_COUNT; l++) {
+    headerEls[l].value = pages[currentPage][l].header;
+    textEls[l].value = pages[currentPage][l].text;
+  }
+}
+
+function collectCurrent() {
+  for (let l = 0; l < LINE_COUNT; l++) {
+    pages[currentPage][l].header = headerEls[l].value;
+    pages[currentPage][l].text = textEls[l].value;
+  }
+}
+
+function switchPage(p) {
+  collectCurrent();
+  currentPage = p;
+  renderTabs(); renderLines();
+  if (stateLoaded) scheduleSend();
+}
+
+function applyState(s) {
+  if (!s || !Array.isArray(s.pages)) return;
+  for (let p = 0; p < PAGE_COUNT && p < s.pages.length; p++) {
+    const sp = s.pages[p];
+    if (Array.isArray(sp)) {
+      for (let l = 0; l < LINE_COUNT && l < sp.length; l++) {
+        const pair = sp[l];
+        if (Array.isArray(pair)) {
+          pages[p][l].header = pair[0] || '';
+          pages[p][l].text = pair[1] || '';
+        }
+      }
+    }
+  }
+  renderLines(); renderTabs();
+}
+
+function collectState() {
+  collectCurrent();
+  const out = { currentpage: currentPage, pages: [] };
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    const page = [];
+    for (let l = 0; l < LINE_COUNT; l++) page.push([pages[p][l].header, pages[p][l].text]);
+    out.pages.push(page);
+  }
+  return out;
+}
+
+function send() {
+  if (!stateLoaded) return;
+  const json = JSON.stringify(collectState());
+  lastSentJson = json;
+  setStatus('已提交', 'ok');
+  fetch(BASE + '/update', { method: 'POST', body: json })
+    .catch(() => setStatus('本地桥未连接，请先启动游戏', 'err'));
+}
+
+function scheduleSend() {
+  clearTimeout(timer);
+  timer = setTimeout(send, 400);
+}
+
+function poll() {
+  fetch(BASE + '/state')
+    .then(r => {
+      if (r.status === 204) { return null; }
+      return r.json();
+    })
+    .then(s => {
+      if (s == null) {
+        setStatus('等待游戏同步…（进游戏、手上拿写字板）');
+        return;
+      }
+      const json = JSON.stringify(s);
+      if (json !== lastRemoteJson) {
+        lastRemoteJson = json;
+        if (json !== lastSentJson) {
+          applyState(s);
+          setStatus('游戏端有更新', 'ok');
+        }
+      }
+      if (!stateLoaded) {
+        stateLoaded = true;
+        setStatus('已连接', 'ok');
+      }
+    })
+    .catch(() => setStatus('本地桥未连接，请先启动游戏', 'err'));
+}
+
+init();
+setInterval(poll, 300);
+poll();
+</script>
+</body>
+</html>
