@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -13,11 +13,17 @@
     display: flex; flex-direction: column;
   }
   header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 20px; background: #23272f; border-bottom: 1px solid #333a45;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 20px; background: #23272f; border-bottom: 1px solid #333a45;
   }
   header h1 { font-size: 17px; margin: 0; }
-  #status { font-size: 13px; padding: 4px 12px; border-radius: 20px; background: #3a3f4a; }
+  .actions { display: flex; gap: 8px; margin-left: auto; }
+  .actions button {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #3a4250; cursor: pointer;
+    background: #2f3642; color: #dfe4ec; font-size: 13px;
+  }
+  .actions button:hover { background: #3a4250; }
+  #status { font-size: 13px; padding: 4px 12px; border-radius: 20px; background: #3a3f4a; white-space: nowrap; }
   #status.ok { background: #1f5d3a; }
   #status.err { background: #6b2b2b; }
   .tabs { display: flex; gap: 6px; padding: 12px 20px 0; }
@@ -26,29 +32,185 @@
     background: #23272f; color: #c4cad4; border-radius: 8px 8px 0 0; font-size: 14px;
   }
   .tabs button.active { background: #2f3642; color: #fff; border-bottom-color: #2f3642; }
-  #lines { flex: 1; padding: 12px 20px 20px; overflow-y: auto; }
-  .line { display: flex; gap: 8px; margin-bottom: 8px; align-items: stretch; }
-  .line input, .line textarea {
-    background: #23272f; border: 1px solid #333a45; color: #fff;
-    border-radius: 6px; outline: none; padding: 8px 10px; font-size: 14px;
+  #lines {
+    flex: 1; padding: 8px 12px; overflow: auto;
+    display: flex; align-items: center; justify-content: center;
   }
-  .line input:focus, .line textarea:focus { border-color: #4f7df0; }
-  .line .h { width: 22%; font-size: 13px; }
-  .line .t { flex: 1; resize: none; font-family: inherit; line-height: 1.5; }
+  #paper {
+    width: min(540px, 72vh, 94vw);
+    aspect-ratio: 3 / 4;
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .line { display: flex; gap: 6px; flex: 1; align-items: center; min-height: 0; }
+  .state {
+    flex: 0 0 auto; width: 30px; height: 1.6em; border-radius: 6px; cursor: pointer;
+    border: 1px solid #333a45; background: #23272f; color: #aaa;
+    font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .state[data-s="1"] { color: #e05a5a; border-color: #7a3a3a; }
+  .state[data-s="2"] { color: #4fbf6b; border-color: #2f6b3f; }
+  .t {
+    flex: 1; height: 100%; min-height: 0; overflow: auto;
+    background: #23272f; border: 1px solid #333a45; color: #fff;
+    border-radius: 6px; outline: none; padding: 0 10px; font-size: 14px;
+    font-family: inherit; line-height: 1.6;
+    display: flex; align-items: center;
+  }
+  .t-inner {
+    width: 100%; min-height: 1.6em; outline: none;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .t-inner:empty:before { content: attr(data-ph); color: #6b7280; pointer-events: none; }
+  .t:focus { border-color: #4f7df0; }
+  /* 我的写字板面板 */
+  #libPanel {
+    position: fixed; top: 0; right: -360px; width: 340px; height: 100vh;
+    background: #23272f; border-left: 1px solid #333a45; z-index: 100;
+    transition: right .2s; display: flex; flex-direction: column;
+    box-shadow: -8px 0 24px rgba(0,0,0,.4);
+  }
+  #libPanel.open { right: 0; }
+  .lib-head { padding: 12px 16px; border-bottom: 1px solid #333a45; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+  .lib-head button { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
+  #libList { flex: 1; overflow-y: auto; padding: 8px; }
+  .lib-item { padding: 10px; border: 1px solid #333a45; border-radius: 8px; margin-bottom: 8px; background: #2a2e36; }
+  .lib-item .nm { font-size: 14px; color: #fff; margin-bottom: 4px; outline: none; }
+  .lib-item .meta { font-size: 11px; color: #8a92a0; }
+  .lib-item.cur { border-color: #4f7df0; }
+  #bookPanel {
+    position: fixed; top: 0; right: -360px; width: 340px; height: 100vh;
+    background: #23272f; border-left: 1px solid #333a45; z-index: 101;
+    transition: right .2s; display: flex; flex-direction: column;
+    box-shadow: -8px 0 24px rgba(0,0,0,.4);
+  }
+  #bookPanel.open { right: 0; }
+  #bookList { flex: 1; overflow-y: auto; padding: 8px; }
+  #bookPanel .lib-head button { font-size: 14px; margin-left: 6px; }
+  #pagePreview {
+    position: fixed; z-index: 300; width: 220px; aspect-ratio: 3 / 4;
+    background: #f5f0e6; color: #333; border: 1px solid #8a7a5a;
+    border-radius: 4px; padding: 10px; font-size: 9px; line-height: 1.35;
+    display: none; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.55);
+    overflow: hidden;
+  }
+  #pagePreview .pv-line { display: flex; gap: 4px; }
+  #pagePreview .pv-mark { width: 9px; flex: 0 0 auto; }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  .bk-out-grid.anim .bk-page-card { animation: pageIn .32s cubic-bezier(.2,.7,.3,1) both; }
+  .bk-out-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 16px; justify-content: center; }
+  .bk-page-card.dragging { opacity: 0.35; transform: scale(0.98); }
+  .bk-page-card.drag-over { border-color: #2f6fbf; box-shadow: 0 0 0 2px rgba(79,125,240,.6); }
+  @keyframes landed {
+    0% { box-shadow: 0 0 0 3px rgba(79,191,107,.95); transform: scale(1.03); }
+    100% { box-shadow: 0 0 0 0 rgba(79,191,107,0); transform: scale(1); }
+  }
+  .bk-page-card.landed { animation: landed .45s ease; }
+  .bk-page-card { position: relative; }
+  .bk-page-card.insert-before::before { content: ''; position: absolute; left: -9px; top: 0; bottom: 0; width: 3px; background: #2f6fbf; border-radius: 2px; box-shadow: 0 0 8px #2f6fbf; }
+  .bk-page-card.insert-after::after { content: ''; position: absolute; right: -9px; top: 0; bottom: 0; width: 3px; background: #2f6fbf; border-radius: 2px; box-shadow: 0 0 8px #2f6fbf; }
+  .bk-page-card { width: 100%; aspect-ratio: 3 / 4; display: flex; flex-direction: column; border: 1px solid #8a7a5a; border-radius: 4px; background: #f5f0e6; padding: 10px; cursor: grab; color: #333; font-size: 11px; }
+  .bk-page-card .card-head { font-size: 11px; color: #7a6a4a; margin-bottom: 4px; border-bottom: 1px solid #d8cfbc; padding-bottom: 4px; flex: 0 0 auto; }
+  .bk-page-card .row { flex: 1; display: flex; gap: 4px; border-bottom: 1px solid #d8cfbc; padding: 1px 0; min-height: 0; }
+  .bk-page-card .mark { width: 12px; flex: 0 0 auto; color: #a05050; }
+  .bk-page-card .txt { flex: 1; white-space: pre-wrap; overflow: hidden; }
+  .bk-page-card button { flex: 0 0 auto; margin-top: 4px; font-size: 11px; background: #3a2430; color: #e08a8a; border: 1px solid #5a3040; border-radius: 4px; padding: 1px 8px; cursor: pointer; }
+  /* 全屏书视图 */
+  #bookScreen {
+    position: fixed; inset: 0; background: #1b1e23; z-index: 200;
+    display: none; flex-direction: column;
+  }
+  #bookScreen.open { display: flex; }
+  .bk-top {
+    display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+    background: #23272f; border-bottom: 1px solid #333a45;
+  }
+  .bk-top h2 { font-size: 17px; margin: 0; }
+  .bk-top .sp { flex: 1; }
+  .bk-top button {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid #3a4250; cursor: pointer;
+    background: #2f3642; color: #dfe4ec; font-size: 13px;
+  }
+  .bk-body { flex: 1; display: flex; overflow: hidden; }
+  .bk-left { width: 40%; min-width: 300px; border-right: 1px solid #333a45; overflow-y: auto; padding: 12px; }
+  .bk-right { flex: 1; overflow-y: auto; padding: 12px; }
+  .bk-sec { font-size: 13px; color: #8a92a0; margin: 4px 0 10px; }
+  .bk-board { border: 1px solid #333a45; border-radius: 8px; margin-bottom: 10px; background: #23272f; }
+  .bk-board-h { padding: 8px 12px; font-size: 13px; color: #fff; border-bottom: 1px solid #333a45; }
+  .bk-pages { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .bk-page { padding: 8px 10px; background: #2a2e36; border: 1px solid #333a45; border-radius: 6px; font-size: 12px; color: #c4cad4; cursor: grab; }
+  .bk-page:hover { border-color: #4f7df0; }
+  .bk-drop { min-height: 120px; border: 2px dashed #3a4250; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .bk-drop.over { border-color: #4f7df0; background: #222a3a; }
+  .bk-out { border: 1px solid #333a45; border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #23272f; }
+  .bk-out .oh { font-size: 12px; color: #8a92a0; margin-bottom: 4px; }
+  .bk-out .ot { font-size: 13px; color: #fff; white-space: pre-wrap; }
+  .bk-out button { margin-top: 6px; font-size: 12px; background:#3a2430;color:#e08a8a;border:1px solid #5a3040;border-radius:4px;padding:2px 8px;cursor:pointer; }
+  .bk-empty { color: #6b7280; font-size: 12px; padding: 8px; }
+  .bk-book { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid #333a45; border-radius: 8px; margin-bottom: 8px; background: #23272f; cursor: pointer; }
+  .bk-book:hover { border-color: #4f7df0; }
+  #pageTitleWrap { padding: 10px 12px 0; }
+  #pageTitle { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #333a45; background: #23272f; color: #fff; font-size: 14px; outline: none; }
+  #pageTitle:focus { border-color: #4f7df0; }
   footer {
     padding: 10px 20px; font-size: 12px; color: #8a92a0;
     border-top: 1px solid #333a45; background: #23272f;
+  }
+  /* 打印视图，平时隐藏 */
+  #printView { display: none; }
+  @media print {
+    body > *:not(#printView) { display: none !important; }
+    #printView { display: block !important; color: #000; background: #fff; padding: 0; }
+    #printView h2 { margin: 16px 0 8px; font-size: 16px; border-bottom: 1px solid #ccc; }
+    #printView .pl { margin: 4px 0; font-size: 13px; }
+    #printView .pm { font-weight: bold; margin-right: 6px; }
   }
 </style>
 </head>
 <body>
   <header>
     <h1>📋 写字板同步</h1>
+    <div class="actions">
+      <button id="btnLib">📚 写字板</button>
+      <button id="btnBook">📖 我的书</button>
+      <button id="btnImport">导入 TXT</button>
+      <button id="btnMd">导出 MD</button>
+      <button id="btnPdf">导出 PDF</button>
+    </div>
     <span id="status">连接中…</span>
   </header>
   <div class="tabs" id="tabs"></div>
-  <div id="lines"></div>
-  <footer>游戏里把写字板拿在主手，这里改动约 0.5 秒内同步进游戏；游戏里改也会回传。每页 12 行。</footer>
+  <div id="pageTitleWrap"><input id="pageTitle" placeholder="本页标题"></div>
+  <div id="lines"><div id="paper"></div></div>
+  <footer>游戏里把写字板拿在主手，这里改动约 0.5 秒内同步进游戏；游戏里改也会回传。每页 12 行，回车自动换行。</footer>
+  <input type="file" id="fileInput" accept=".txt" style="display:none">
+  <div id="printView"></div>
+  <div id="libPanel">
+    <div class="lib-head">我的写字板 <span><button id="libClear" title="清空本地库">清空</button><button id="libClose">×</button></span></div>
+    <div id="libList"></div>
+  </div>
+  <div id="bookPanel">
+    <div class="lib-head"><span id="bookTitle">我的书</span><span><button id="bookBack" style="display:none">←</button><button id="bookNew">＋新建</button><button id="bookClose">×</button></span></div>
+    <div id="bookList"></div>
+  </div>
+  <div id="bookScreen">
+    <div class="bk-top">
+      <button id="bkBack">←</button>
+      <h2 id="bkTitle">我的书</h2>
+      <span class="sp"></span>
+      <button id="bkNew">＋新建书</button>
+      <button id="bkClose">×</button>
+    </div>
+    <div class="bk-body">
+      <div class="bk-left" id="bkLeft"></div>
+      <div class="bk-right" id="bkRight"></div>
+    </div>
+  </div>
+
+  <div id="pagePreview"></div>
 
 <script>
 const PORT = 8765;
@@ -56,9 +218,12 @@ const BASE = 'http://127.0.0.1:' + PORT;
 const PAGE_COUNT = 5;
 const LINE_COUNT = 12;
 
-const pages = [];            // pages[p][l] = {header, text}
-const headerEls = [];        // 12 个标题输入框
-const textEls = [];          // 12 个正文输入框
+const STATE_CHARS = { 0: '☐', 1: '✗', 2: '✓' };
+
+const pages = [];            // pages[p][l] = {text, button}
+const pageTitles = new Array(PAGE_COUNT).fill('');
+const stateEls = [];    // 12 个三态按钮
+const textEls = [];     // 12 个正文 textarea
 let currentPage = 0;
 let stateLoaded = false;
 let lastSentJson = null;
@@ -68,16 +233,35 @@ let timer = null;
 const statusEl = document.getElementById('status');
 const tabsEl = document.getElementById('tabs');
 const linesEl = document.getElementById('lines');
+const paperEl = document.getElementById('paper');
+const pageTitleEl = document.getElementById('pageTitle');
 
 function setStatus(txt, cls) {
   statusEl.textContent = txt;
   statusEl.className = cls || '';
 }
 
+function autoGrow(t) {
+  t.style.height = 'auto';
+  t.style.height = Math.max(34, t.scrollHeight) + 'px';
+}
+
+function focusLine(n) {
+  if (n < 0 || n >= LINE_COUNT) return;
+  const nt = textEls[n];
+  nt.focus();
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(nt);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 function init() {
   for (let p = 0; p < PAGE_COUNT; p++) {
     pages.push([]);
-    for (let l = 0; l < LINE_COUNT; l++) pages[p].push({ header: '', text: '' });
+    for (let l = 0; l < LINE_COUNT; l++) pages[p].push({ text: '', button: 0 });
   }
   for (let p = 0; p < PAGE_COUNT; p++) {
     const b = document.createElement('button');
@@ -88,17 +272,59 @@ function init() {
   for (let l = 0; l < LINE_COUNT; l++) {
     const row = document.createElement('div');
     row.className = 'line';
-    const h = document.createElement('input');
-    h.className = 'h'; h.placeholder = '标题';
-    const t = document.createElement('textarea');
-    t.className = 't'; t.placeholder = '第' + (l + 1) + '行';
-    row.appendChild(h); row.appendChild(t);
-    linesEl.appendChild(row);
-    headerEls.push(h); textEls.push(t);
-    h.addEventListener('input', scheduleSend);
-    t.addEventListener('input', scheduleSend);
+
+    const st = document.createElement('button');
+    st.className = 'state';
+    st.type = 'button';
+    st.dataset.s = '0';
+    st.textContent = STATE_CHARS[0];
+    st.title = '点击切换：空白 / 叉 / 勾';
+
+    const t = document.createElement('div');
+    t.className = 't';
+    const ti = document.createElement('div');
+    ti.className = 't-inner';
+    ti.contentEditable = 'true';
+    ti.spellcheck = false;
+    ti.dataset.ph = '第' + (l + 1) + '行';
+    t.appendChild(ti);
+
+    row.appendChild(st); row.appendChild(t);
+    paperEl.appendChild(row);
+    stateEls.push(st); textEls.push(ti);
+
+    st.addEventListener('click', () => cycleState(l));
+    ti.addEventListener('input', scheduleSend);
+    // 回车 = 下一条；Shift+回车 = 换行；上下箭头 = 上/下一条
+    ti.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        pages[currentPage][l].text = ti.innerText;
+        focusLine(l + 1);
+        scheduleSend();
+      } else if (e.key === 'ArrowUp') {
+        if (l > 0) { e.preventDefault(); focusLine(l - 1); }
+      } else if (e.key === 'ArrowDown') {
+        if (l + 1 < LINE_COUNT) { e.preventDefault(); focusLine(l + 1); }
+      }
+    });
   }
   renderTabs(); renderLines();
+}
+
+function cycleState(l) {
+  const cur = pages[currentPage][l].button || 0;
+  const next = (cur + 1) % 3;
+  pages[currentPage][l].button = next;
+  paintState(l);
+  scheduleSend();
+}
+
+function paintState(l) {
+  const st = stateEls[l];
+  const s = pages[currentPage][l].button || 0;
+  st.dataset.s = String(s);
+  st.textContent = STATE_CHARS[s];
 }
 
 function renderTabs() {
@@ -107,16 +333,16 @@ function renderTabs() {
 }
 
 function renderLines() {
+  if (pageTitleEl) pageTitleEl.value = pageTitles[currentPage] || '';
   for (let l = 0; l < LINE_COUNT; l++) {
-    headerEls[l].value = pages[currentPage][l].header;
-    textEls[l].value = pages[currentPage][l].text;
+    textEls[l].innerText = pages[currentPage][l].text;
+    paintState(l);
   }
 }
 
 function collectCurrent() {
   for (let l = 0; l < LINE_COUNT; l++) {
-    pages[currentPage][l].header = headerEls[l].value;
-    pages[currentPage][l].text = textEls[l].value;
+    pages[currentPage][l].text = textEls[l].innerText;
   }
 }
 
@@ -129,14 +355,17 @@ function switchPage(p) {
 
 function applyState(s) {
   if (!s || !Array.isArray(s.pages)) return;
+  if (Array.isArray(s.pageTitles)) {
+    for (let p = 0; p < PAGE_COUNT && p < s.pageTitles.length; p++) pageTitles[p] = s.pageTitles[p] || '';
+  }
   for (let p = 0; p < PAGE_COUNT && p < s.pages.length; p++) {
     const sp = s.pages[p];
     if (Array.isArray(sp)) {
       for (let l = 0; l < LINE_COUNT && l < sp.length; l++) {
-        const pair = sp[l];
-        if (Array.isArray(pair)) {
-          pages[p][l].header = pair[0] || '';
-          pages[p][l].text = pair[1] || '';
+        const arr = sp[l];
+        if (Array.isArray(arr)) {
+          if (arr.length >= 3) { pages[p][l].text = arr[1] || ''; pages[p][l].button = Number(arr[2]) || 0; }
+          else { pages[p][l].text = arr[0] || ''; pages[p][l].button = Number(arr[1]) || 0; }
         }
       }
     }
@@ -146,10 +375,13 @@ function applyState(s) {
 
 function collectState() {
   collectCurrent();
-  const out = { currentpage: currentPage, pages: [] };
+  const out = { currentpage: currentPage, pageTitles: pageTitles.slice(), pages: [] };
   for (let p = 0; p < PAGE_COUNT; p++) {
     const page = [];
-    for (let l = 0; l < LINE_COUNT; l++) page.push([pages[p][l].header, pages[p][l].text]);
+    for (let l = 0; l < LINE_COUNT; l++) {
+      const x = pages[p][l];
+      page.push([x.text, x.button || 0]);
+    }
     out.pages.push(page);
   }
   return out;
@@ -169,6 +401,242 @@ function scheduleSend() {
   timer = setTimeout(send, 400);
 }
 
+/* ---------- 本地库（按写字板 id 存快照） ---------- */
+const LIB_KEY = 'clipboardsync_library';
+function loadLib() {
+  try { return JSON.parse(localStorage.getItem(LIB_KEY) || '{}'); } catch (e) { return {}; }
+}
+function saveLib(lib) { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); }
+function upsertLib(state) {
+  if (!state || !state.id) return;
+  const lib = loadLib();
+  const prev = lib[state.id] || {};
+  lib[state.id] = {
+    name: prev.name || state.name || ('clipboard-' + state.id.slice(0, 8)),
+    pageTitles: state.pageTitles || [],
+    pages: state.pages,
+    updated: Date.now()
+  };
+  saveLib(lib);
+  renderLib(state.id);
+}
+function renderLib(curId) {
+  const lib = loadLib();
+  const el = document.getElementById('libList');
+  const ids = Object.keys(lib);
+  if (ids.length === 0) {
+    el.innerHTML = '<div style="color:#8a92a0;font-size:12px;padding:8px">还没有写字板。游戏里拿一块写字板同步一下，就会出现在这里。</div>';
+    return;
+  }
+  el.innerHTML = '';
+  for (const id of ids) {
+    const item = lib[id];
+    const div = document.createElement('div');
+    div.className = 'lib-item' + (id === curId ? ' cur' : '');
+    const nm = document.createElement('div');
+    nm.className = 'nm';
+    nm.textContent = item.name;
+    nm.title = '点这里改名';
+    nm.style.cursor = 'pointer';
+    nm.onclick = () => {
+      const v = prompt('写字板名字：', item.name);
+      if (v === null || !v.trim()) return;
+      const lib2 = loadLib();
+      if (lib2[id]) { lib2[id].name = v.trim(); saveLib(lib2); renderLib(curId); }
+    };
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = 'ID ' + id.slice(0, 8) + ' · ' + ((item.pages && item.pages.length) || 0) + ' 页';
+    div.appendChild(nm); div.appendChild(meta);
+    el.appendChild(div);
+  }
+}
+
+/* ---------- 书（点击选页生成 + 拖拽排序） ---------- */
+const BOOK_KEY = 'clipboardsync_books';
+let currentBook = null;
+let dragIdx = null;
+let bookAnim = false;
+let landedIdx = -1;
+let insertIdx = -1;
+function loadBooks() { try { return JSON.parse(localStorage.getItem(BOOK_KEY) || '{}'); } catch (e) { return {}; } }
+function saveBooks(b) { localStorage.setItem(BOOK_KEY, JSON.stringify(b)); }
+function parseRow(row) {
+  if (!Array.isArray(row)) return { text: '', button: 0 };
+  if (row.length >= 3) return { text: String(row[1] || ''), button: Number(row[2]) || 0 };
+  return { text: String(row[0] || ''), button: Number(row[1]) || 0 };
+}
+
+function previewText(pd) {
+  if (!pd || !Array.isArray(pd)) return '(\u7a7a)';
+  const ps = [];
+  pd.forEach(r => { const o = parseRow(r); if (o.text) ps.push(o.text); });
+  const z = ps.join(' / ');
+  return z.length > 60 ? z.slice(0, 60) + '\u2026' : (z || '(\u7a7a)');
+}
+function openBookScreen() { document.getElementById('bookScreen').classList.add('open'); renderBookScreen(); }
+function renderBookScreen() {
+  const books = loadBooks();
+  const left = document.getElementById('bkLeft'), right = document.getElementById('bkRight');
+  const title = document.getElementById('bkTitle'), backBtn = document.getElementById('bkBack'), newBtn = document.getElementById('bkNew');
+  left.innerHTML = ''; right.innerHTML = '';
+  if (!currentBook) {
+    title.textContent = '我的书'; backBtn.style.display = 'none'; newBtn.style.display = '';
+    const ids = Object.keys(books);
+    if (ids.length === 0) { left.innerHTML = '<div class="bk-empty">还没有书，点右上「＋新建书」。</div>'; return; }
+    for (const id of ids) {
+      const b = books[id];
+      const div = document.createElement('div'); div.className = 'bk-book';
+      const nm = document.createElement('span'); nm.textContent = b.name;
+      const cnt = document.createElement('span'); cnt.style.cssText = 'color:#8a92a0;font-size:12px';
+      cnt.textContent = (b.pages ? b.pages.length : 0) + ' 页';
+      div.appendChild(nm); div.appendChild(cnt);
+      div.onclick = () => { currentBook = id; renderBookScreen(); };
+      left.appendChild(div);
+    }
+    return;
+  }
+  const b = books[currentBook];
+  if (!b) { currentBook = null; renderBookScreen(); return; }
+  title.textContent = b.name; backBtn.style.display = ''; newBtn.style.display = 'none';
+  renderBookEdit(b, books);
+}
+
+function showPreview(pageData, ev) {
+  const el = document.getElementById('pagePreview');
+  el.innerHTML = '';
+  for (let l = 0; l < LINE_COUNT; l++) {
+    const o = parseRow(pageData && pageData[l]);
+    const div = document.createElement('div');
+    div.className = 'pv-line';
+    const m = document.createElement('span');
+    m.className = 'pv-mark';
+    m.textContent = o.button === 1 ? '✗' : o.button === 2 ? '✓' : '';
+    const t = document.createElement('span');
+    t.textContent = o.text;
+    div.appendChild(m); div.appendChild(t);
+    el.appendChild(div);
+  }
+  el.style.display = 'block';
+  const x = Math.min(ev.clientX + 18, window.innerWidth - 280);
+  const y = Math.min(ev.clientY + 18, window.innerHeight - 330);
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+}
+function hidePreview() { document.getElementById('pagePreview').style.display = 'none'; }
+
+function renderBookEdit(b, books) {
+  const left = document.getElementById('bkLeft'), right = document.getElementById('bkRight');
+  const lib = loadLib();
+  const libIds = Object.keys(lib);
+  left.innerHTML = '<div class="bk-sec">选择写字板（默认全选，点名字展开）</div>';
+  if (libIds.length === 0) { left.innerHTML += '<div class="bk-empty">本地库还没有写字板，先同步一块。</div>'; }
+  libIds.forEach(bid => {
+    const board = lib[bid];
+    const item = document.createElement('div'); item.className = 'bk-board';
+    const h = document.createElement('div'); h.className = 'bk-board-h';
+    h.style.cssText = 'display:flex;align-items:center;cursor:pointer';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.dataset.bid = bid;
+    cb.onclick = e => e.stopPropagation();
+    h.appendChild(cb);
+    const nm = document.createElement('span'); nm.textContent = board.name; nm.style.marginLeft = '6px';
+    h.appendChild(nm);
+    item.appendChild(h);
+    const pages = document.createElement('div'); pages.className = 'bk-pages'; pages.style.display = 'none';
+    (board.pages || []).forEach((pageData, pi) => {
+      const p = document.createElement('div'); p.className = 'bk-page'; p.style.cursor = 'default';
+      const pcb = document.createElement('input'); pcb.type = 'checkbox'; pcb.checked = true; pcb.dataset.pi = pi;
+      p.appendChild(pcb);
+      const txt = document.createElement('span'); txt.textContent = '第' + (pi + 1) + '页'; txt.style.marginLeft = '6px';
+      p.appendChild(txt);
+      p.addEventListener('mouseenter', e => showPreview(pageData, e));
+      p.addEventListener('mousemove', e => showPreview(pageData, e));
+      p.addEventListener('mouseleave', hidePreview);
+      pages.appendChild(p);
+    });
+    item.appendChild(pages);
+    h.onclick = () => { pages.style.display = pages.style.display === 'none' ? '' : 'none'; };
+    left.appendChild(item);
+  });
+
+  const gen = document.createElement('button');
+  gen.textContent = '按所选生成书页';
+  gen.style.cssText = 'width:100%;padding:10px;margin-top:12px;background:#2f6fbf;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px';
+  gen.onclick = () => {
+    const pages = [];
+    document.querySelectorAll('#bkLeft .bk-board').forEach(boardEl => {
+      const cb = boardEl.querySelector('.bk-board-h input[type=checkbox]');
+      if (!cb || !cb.checked) return;
+      const bid = cb.dataset.bid;
+      boardEl.querySelectorAll('.bk-pages input[type=checkbox]').forEach(pcb => {
+        if (pcb.checked) pages.push({ boardId: bid, page: parseInt(pcb.dataset.pi, 10) });
+      });
+    });
+    if (pages.length === 0) { alert('没选任何页'); return; }
+    bookAnim = true;
+    b.pages = pages;
+    saveBooks(books);
+    renderBookScreen();
+  };
+  left.appendChild(gen);
+
+  right.innerHTML = '';
+  const grid = document.createElement('div'); grid.className = 'bk-out-grid';
+  if (bookAnim) grid.classList.add('anim');
+  b.pages.forEach((ref, idx) => {
+    const board = lib[ref.boardId];
+    const pageData = board && board.pages ? board.pages[ref.page] : null;
+    const card = document.createElement('div'); card.className = 'bk-page-card'; card.draggable = true;
+    const head = document.createElement('div'); head.className = 'card-head';
+    head.textContent = '第' + (idx + 1) + ' 页 · ' + (board ? board.name : '?') + ' 第' + (ref.page + 1) + '页';
+    card.appendChild(head);
+    for (let l = 0; l < LINE_COUNT; l++) {
+      const o = parseRow(pageData && pageData[l]);
+      const r = document.createElement('div'); r.className = 'row';
+      const mk = document.createElement('span'); mk.className = 'mark';
+      mk.textContent = o.button === 1 ? '\u2717' : o.button === 2 ? '\u2713' : '\u2610';
+      const tx = document.createElement('span'); tx.className = 'txt'; tx.textContent = o.text;
+      r.appendChild(mk); r.appendChild(tx); card.appendChild(r);
+    }
+    const rm = document.createElement('button'); rm.textContent = '移除';
+    rm.onclick = e => { e.stopPropagation(); b.pages.splice(idx, 1); saveBooks(books); renderBookScreen(); };
+    card.appendChild(rm);
+    card.addEventListener('dragstart', () => { dragIdx = idx; card.classList.add('dragging'); });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      const rect = card.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      document.querySelectorAll('.bk-page-card').forEach(c => c.classList.remove('insert-before', 'insert-after'));
+      card.classList.add(before ? 'insert-before' : 'insert-after');
+      insertIdx = before ? idx : idx + 1;
+    });
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('insert-before', 'insert-after');
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      document.querySelectorAll('.bk-page-card').forEach(c => c.classList.remove('insert-before', 'insert-after'));
+      if (dragIdx === null) return;
+      let target = insertIdx;
+      insertIdx = -1;
+      if (target < 0) return;
+      const moved = b.pages.splice(dragIdx, 1)[0];
+      if (dragIdx < target) target--;
+      b.pages.splice(target, 0, moved);
+      dragIdx = null;
+      saveBooks(books);
+      landedIdx = target;
+      renderBookScreen();
+    });
+    if (bookAnim) card.style.animationDelay = (idx * 45) + 'ms';
+    if (idx === landedIdx) { card.classList.add('landed'); landedIdx = -1; }
+    grid.appendChild(card);
+  });
+  right.appendChild(grid);
+  bookAnim = false;
+}
+
 function poll() {
   fetch(BASE + '/state')
     .then(r => {
@@ -180,12 +648,17 @@ function poll() {
         setStatus('等待游戏同步…（进游戏、手上拿写字板）');
         return;
       }
+      upsertLib(s);
       const json = JSON.stringify(s);
       if (json !== lastRemoteJson) {
         lastRemoteJson = json;
         if (json !== lastSentJson) {
-          applyState(s);
-          setStatus('游戏端有更新', 'ok');
+          const act = document.activeElement;
+          const editing = act && (act === pageTitleEl || (act.classList && act.classList.contains('t-inner')));
+          if (!editing) {
+            applyState(s);
+            setStatus('游戏端有更新', 'ok');
+          }
         }
       }
       if (!stateLoaded) {
@@ -196,7 +669,117 @@ function poll() {
     .catch(() => setStatus('本地桥未连接，请先启动游戏', 'err'));
 }
 
+/* ---------- 导出 ---------- */
+function buildPlain(skipEmpty) {
+  collectCurrent();
+  const out = [];
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    const lines = [];
+    for (let l = 0; l < LINE_COUNT; l++) {
+      const x = pages[p][l];
+      const txt = (x.text || '').trim();
+      if (skipEmpty && !txt) continue;
+      lines.push({ text: txt, button: x.button || 0 });
+    }
+    out.push({ title: pageTitles[p] || '', lines });
+  }
+  return out;
+}
+
+function exportMd() {
+  const data = buildPlain(true);
+  let md = '# 写字板笔记\n\n';
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    if (data[p].lines.length === 0) continue;
+    md += '## ' + (data[p].title || ('第 ' + (p + 1) + ' 页')) + '\n\n';
+    for (const ln of data[p].lines) {
+      const mark = ln.button === 1 ? '✗ ' : ln.button === 2 ? '✓ ' : '';
+      md += '- ' + mark + ln.text + '\n';
+    }
+    md += '\n';
+  }
+  downloadText(md, 'clipboard.md', 'text/markdown;charset=utf-8');
+}
+
+function exportPdf() {
+  const data = buildPlain(true);
+  const pv = document.getElementById('printView');
+  let html = '<h1>写字板笔记</h1>';
+  for (let p = 0; p < PAGE_COUNT; p++) {
+    if (data[p].lines.length === 0) continue;
+    html += '<h2>' + escapeHtml(data[p].title || ('第 ' + (p + 1) + ' 页')) + '</h2>';
+    for (const ln of data[p].lines) {
+      const mark = ln.button === 1 ? '✗' : ln.button === 2 ? '✓' : '';
+      html += '<div class="pl">' + (mark ? '<span class="pm">' + mark + '</span>' : '') + escapeHtml(ln.text) + '</div>';
+    }
+  }
+  pv.innerHTML = html;
+  window.print();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function downloadText(text, filename, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnBook').addEventListener('click', openBookScreen);
+document.getElementById('bkClose').addEventListener('click', () => { document.getElementById('bookScreen').classList.remove('open'); });
+document.getElementById('bkBack').addEventListener('click', () => { currentBook = null; renderBookScreen(); });
+document.getElementById('bkNew').addEventListener('click', () => {
+  const name = prompt('书的名字：', '新书');
+  if (!name) return;
+  const books = loadBooks();
+  const id = 'b_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  books[id] = { name: name.trim() || '新书', pages: [] };
+  saveBooks(books);
+  currentBook = id;
+  renderBookScreen();
+});
+document.getElementById('btnMd').addEventListener('click', exportMd);
+document.getElementById('btnPdf').addEventListener('click', exportPdf);
+document.getElementById('btnLib').addEventListener('click', () => {
+  document.getElementById('libPanel').classList.toggle('open');
+  renderLib(null);
+});
+document.getElementById('libClose').addEventListener('click', () => {
+  document.getElementById('libPanel').classList.remove('open');
+});
+document.getElementById('libClear').addEventListener('click', () => {
+  if (confirm('清空本地库？这会删掉所有已同步的写字板记录。')) {
+    localStorage.removeItem(LIB_KEY);
+    renderLib(null);
+  }
+});
+
 init();
+renderLib(null);
+pageTitleEl.addEventListener('input', () => { pageTitles[currentPage] = pageTitleEl.value; scheduleSend(); });
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = String(reader.result || '').split(/\r?\n/);
+    for (let l = 0; l < LINE_COUNT; l++) {
+      pages[currentPage][l].text = lines[l] !== undefined ? lines[l] : '';
+    }
+    renderLines();
+    if (stateLoaded) scheduleSend();
+    setStatus('已导入 ' + Math.min(lines.length, LINE_COUNT) + ' 行', 'ok');
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
 setInterval(poll, 300);
 poll();
 </script>
